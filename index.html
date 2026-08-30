@@ -33,36 +33,28 @@ hr{border:0;border-top:1px solid #ddd;margin:20px 0}
 
 <main>
 
-<!-- BERANDA -->
 <div id="home" class="card">
 <h2>Selamat Datang</h2>
 <button onclick="show('student')">👨‍🎓 Mulai Ulangan</button>
 <button onclick="show('adminLogin')">🔐 Admin</button>
 </div>
 
-<!-- DATA SISWA -->
 <div id="student" class="card hidden">
 <h2>👨‍🎓 Data Peserta</h2>
-
 <input id="studentName" placeholder="Nama siswa">
 <input id="studentClass" placeholder="Kelas, contoh: 7A">
-
 <button onclick="startExam()">📷 Mulai Ulangan</button>
 <button onclick="home()">Kembali</button>
 </div>
 
-<!-- LOGIN ADMIN -->
 <div id="adminLogin" class="card hidden">
 <h2>🔐 Admin EVISTA21</h2>
-
 <input id="adminEmail" type="email" placeholder="Email admin">
 <input id="adminPassword" type="password" placeholder="Password admin">
-
 <button onclick="loginAdmin()">Masuk</button>
 <button onclick="home()">Kembali</button>
 </div>
 
-<!-- ADMIN -->
 <div id="admin" class="card hidden">
 
 <h2>🔐 Panel Admin</h2>
@@ -113,7 +105,6 @@ Memuat nilai...
 
 </div>
 
-<!-- UJIAN -->
 <div id="exam" class="card hidden">
 
 <div style="display:flex;justify-content:space-between;align-items:center">
@@ -141,7 +132,6 @@ Kamera aktif selama ulangan.
 
 </div>
 
-<!-- HASIL -->
 <div id="result" class="card hidden">
 
 <h2>🎉 Ulangan Selesai</h2>
@@ -157,10 +147,6 @@ Kamera aktif selama ulangan.
 </main>
 
 <script type="module">
-
-/* ==============================
-   FIREBASE
-============================== */
 
 import { initializeApp }
 from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -179,9 +165,7 @@ collection,
 addDoc,
 getDocs,
 deleteDoc,
-doc,
-query,
-orderBy
+doc
 }
 from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
@@ -189,47 +173,26 @@ from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 const firebaseConfig = {
 
 apiKey:"AIzaSyC8FvLGE-LvIaPRyM3CI-sE0VA4iL5jxM4",
-
 authDomain:"evalista21.firebaseapp.com",
-
 projectId:"evalista21",
-
 storageBucket:"evalista21.firebasestorage.app",
-
 messagingSenderId:"87074800914",
-
 appId:"1:87074800914:web:be3ac1a371204c2e1a9fcb"
 
 };
 
 
 const app=initializeApp(firebaseConfig);
-
 const auth=getAuth(app);
-
 const db=getFirestore(app);
 
-
-/* ==============================
-   VARIABEL
-============================== */
-
 let questions=[];
-
 let current=0;
-
 let answers=[];
-
 let timer=null;
-
 let timeLeft=1800;
-
 let cameraStream=null;
 
-
-/* ==============================
-   TAMPILAN
-============================== */
 
 function show(id){
 
@@ -249,19 +212,13 @@ window.show=show;
 function home(){
 
 stopCamera();
-
 clearInterval(timer);
-
 show("home");
 
 }
 
 window.home=home;
 
-
-/* ==============================
-   SOAL FIRESTORE
-============================== */
 
 async function loadQuestions(){
 
@@ -292,10 +249,6 @@ alert("Soal belum bisa dimuat.");
 
 }
 
-
-/* ==============================
-   ADMIN LOGIN
-============================== */
 
 async function loginAdmin(){
 
@@ -340,24 +293,15 @@ alert("Email atau password admin salah.");
 window.loginAdmin=loginAdmin;
 
 
-/* ==============================
-   LOGOUT
-============================== */
-
 async function logoutAdmin(){
 
 await signOut(auth);
-
 home();
 
 }
 
 window.logoutAdmin=logoutAdmin;
 
-
-/* ==============================
-   TAMBAH SOAL
-============================== */
 
 async function addQuestion(){
 
@@ -404,9 +348,7 @@ correct:correct
 );
 
 await loadQuestions();
-
 showQuestions();
-
 
 document.getElementById("q").value="";
 document.getElementById("A").value="";
@@ -429,10 +371,6 @@ alert("Soal gagal disimpan.");
 window.addQuestion=addQuestion;
 
 
-/* ==============================
-   TAMPIL SOAL ADMIN
-============================== */
-
 function showQuestions(){
 
 document
@@ -442,7 +380,6 @@ document
 document
 .getElementById("scorePanel")
 .classList.add("hidden");
-
 
 const list=
 document.getElementById("questionList");
@@ -465,7 +402,7 @@ list.innerHTML+=`
 
 <div style="border-bottom:1px solid #ddd;padding:10px">
 
-<b>${i+1}. ${escapeHTML(x.q)}</b><br>
+<b>${escapeHTML(x.q)}</b><br>
 
 A. ${escapeHTML(x.A)}<br>
 B. ${escapeHTML(x.B)}<br>
@@ -485,10 +422,6 @@ D. ${escapeHTML(x.D)}<br>
 window.showQuestions=showQuestions;
 
 
-/* ==============================
-   HAPUS SEMUA SOAL
-============================== */
-
 async function clearQuestions(){
 
 if(!confirm("Yakin ingin menghapus semua soal?")){
@@ -496,7 +429,6 @@ if(!confirm("Yakin ingin menghapus semua soal?")){
 return;
 
 }
-
 
 try{
 
@@ -530,10 +462,6 @@ alert("Soal gagal dihapus.");
 window.clearQuestions=clearQuestions;
 
 
-/* ==============================
-   NILAI SISWA
-============================== */
-
 async function showScores(){
 
 document
@@ -543,7 +471,6 @@ document
 document
 .getElementById("scorePanel")
 .classList.remove("hidden");
-
 
 const list=
 document.getElementById("scoreList");
@@ -563,7 +490,6 @@ list.innerHTML="<p>Belum ada nilai siswa.</p>";
 return;
 
 }
-
 
 let html="";
 
@@ -591,7 +517,6 @@ Benar: ${x.correct} dari ${x.total} soal<br>
 
 });
 
-
 list.innerHTML=html;
 
 }catch(error){
@@ -606,10 +531,6 @@ list.innerHTML="Nilai belum bisa dimuat.";
 
 window.showScores=showScores;
 
-
-/* ==============================
-   MULAI UJIAN
-============================== */
 
 async function startExam(){
 
@@ -631,19 +552,7 @@ return;
 }
 
 
-await loadQuestions();
-
-
-if(questions.length===0){
-
-alert("Belum ada soal.");
-
-return;
-
-}
-
-
-/* LOGIN SISWA SECARA ANONIM */
+/* LOGIN ANONIM DAHULU */
 
 try{
 
@@ -654,6 +563,20 @@ await signInAnonymously(auth);
 console.error(error);
 
 alert("Sistem siswa belum siap.");
+
+return;
+
+}
+
+
+/* BARU AMBIL SOAL */
+
+await loadQuestions();
+
+
+if(questions.length===0){
+
+alert("Belum ada soal.");
 
 return;
 
@@ -719,9 +642,7 @@ document
 
 
 current=0;
-
 answers=[];
-
 timeLeft=1800;
 
 
@@ -735,10 +656,6 @@ startTimer();
 
 window.startExam=startExam;
 
-
-/* ==============================
-   TAMPIL SOAL UJIAN
-============================== */
 
 function showQuestion(){
 
@@ -755,23 +672,23 @@ document
 <h3>${escapeHTML(x.q)}</h3>
 
 <label class="option">
-  <input type="radio" name="answer" value="A">
-  <span>A. ${escapeHTML(x.A)}</span>
+<input type="radio" name="answer" value="A">
+A. ${escapeHTML(x.A)}
 </label>
 
 <label class="option">
-  <input type="radio" name="answer" value="B">
-  <span>B. ${escapeHTML(x.B)}</span>
+<input type="radio" name="answer" value="B">
+B. ${escapeHTML(x.B)}
 </label>
 
 <label class="option">
-  <input type="radio" name="answer" value="C">
-  <span>C. ${escapeHTML(x.C)}</span>
+<input type="radio" name="answer" value="C">
+C. ${escapeHTML(x.C)}
 </label>
 
 <label class="option">
-  <input type="radio" name="answer" value="D">
-  <span>D. ${escapeHTML(x.D)}</span>
+<input type="radio" name="answer" value="D">
+D. ${escapeHTML(x.D)}
 </label>
 
 `;
@@ -779,17 +696,12 @@ document
 }
 
 
-/* ==============================
-   JAWABAN BERIKUTNYA
-============================== */
-
 function nextQuestion(){
 
 const selected=
 document.querySelector(
 'input[name="answer"]:checked'
 );
-
 
 if(!selected){
 
@@ -799,14 +711,12 @@ return;
 
 }
 
-
 answers[current]=selected.value;
 
 
 if(current<questions.length-1){
 
 current++;
-
 showQuestion();
 
 }else{
@@ -820,26 +730,16 @@ finishExam();
 window.nextQuestion=nextQuestion;
 
 
-/* ==============================
-   TIMER
-============================== */
-
 function startTimer(){
 
 clearInterval(timer);
-
 
 timer=setInterval(()=>{
 
 timeLeft--;
 
-
-const min=
-Math.floor(timeLeft/60);
-
-const sec=
-timeLeft%60;
-
+const min=Math.floor(timeLeft/60);
+const sec=timeLeft%60;
 
 document
 .getElementById("timer")
@@ -852,7 +752,6 @@ String(min).padStart(2,"0")
 if(timeLeft<=0){
 
 clearInterval(timer);
-
 finishExam();
 
 }
@@ -862,24 +761,16 @@ finishExam();
 }
 
 
-/* ==============================
-   SELESAI
-============================== */
-
 async function finishExam(){
 
 clearInterval(timer);
 
-
 let benar=0;
-
 
 questions.forEach((x,i)=>{
 
 if(answers[i]===x.correct){
-
 benar++;
-
 }
 
 });
@@ -904,8 +795,6 @@ document
 .replace("Kelas ","");
 
 
-/* SIMPAN NILAI */
-
 try{
 
 await addDoc(
@@ -913,15 +802,10 @@ collection(db,"scores"),
 {
 
 name:name,
-
 className:kelas,
-
 score:nilai,
-
 correct:benar,
-
 total:questions.length,
-
 date:new Date().toLocaleString("id-ID")
 
 }
@@ -939,7 +823,6 @@ alert(
 
 
 stopCamera();
-
 
 show("result");
 
@@ -961,10 +844,6 @@ questions.length+
 }
 
 
-/* ==============================
-   STOP KAMERA
-============================== */
-
 function stopCamera(){
 
 if(cameraStream){
@@ -980,10 +859,6 @@ cameraStream=null;
 }
 
 
-/* ==============================
-   PENGAMAN TAMPILAN
-============================== */
-
 function escapeHTML(text){
 
 return String(text)
@@ -995,10 +870,6 @@ return String(text)
 
 }
 
-
-/* ==============================
-   MULAI
-============================== */
 
 show("home");
 
