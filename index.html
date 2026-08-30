@@ -4,18 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>EVISTA21</title>
+
 <style>
 body{margin:0;font-family:Arial;background:#eef2ff;color:#172033}
 header{background:#2563eb;color:white;text-align:center;padding:15px}
 main{max-width:700px;margin:auto;padding:15px}
 .card{background:white;padding:20px;border-radius:15px;margin:15px 0;box-shadow:0 3px 12px #0002}
 button{background:#2563eb;color:white;border:0;padding:12px 18px;border-radius:9px;margin:5px;cursor:pointer}
+button:hover{background:#1d4ed8}
 input,textarea,select{width:100%;padding:11px;margin:7px 0 12px;box-sizing:border-box;border:1px solid #ccc;border-radius:8px}
 .hidden{display:none}
 .option{display:block;background:#f1f5f9;padding:13px;margin:8px 0;border-radius:8px}
 #camera{width:100%;max-width:360px;border-radius:12px;background:#111}
 #timer{font-size:22px;font-weight:bold;color:#dc2626}
 .score{text-align:center;font-size:40px;font-weight:bold;color:#16a34a}
+.danger{background:#dc2626}
+.small{color:#64748b;font-size:13px}
+hr{border:0;border-top:1px solid #ddd;margin:20px 0}
 </style>
 </head>
 
@@ -28,29 +33,48 @@ input,textarea,select{width:100%;padding:11px;margin:7px 0 12px;box-sizing:borde
 
 <main>
 
+<!-- BERANDA -->
 <div id="home" class="card">
 <h2>Selamat Datang</h2>
 <button onclick="show('student')">👨‍🎓 Mulai Ulangan</button>
 <button onclick="show('adminLogin')">🔐 Admin</button>
 </div>
 
+<!-- DATA SISWA -->
 <div id="student" class="card hidden">
-<h2>Data Siswa</h2>
+<h2>👨‍🎓 Data Peserta</h2>
+
 <input id="studentName" placeholder="Nama siswa">
 <input id="studentClass" placeholder="Kelas, contoh: 7A">
+
 <button onclick="startExam()">📷 Mulai Ulangan</button>
 <button onclick="home()">Kembali</button>
 </div>
 
+<!-- LOGIN ADMIN -->
 <div id="adminLogin" class="card hidden">
 <h2>🔐 Admin EVISTA21</h2>
-<input id="password" type="password" placeholder="Password">
+
+<input id="adminEmail" type="email" placeholder="Email admin">
+<input id="adminPassword" type="password" placeholder="Password admin">
+
 <button onclick="loginAdmin()">Masuk</button>
 <button onclick="home()">Kembali</button>
 </div>
 
+<!-- ADMIN -->
 <div id="admin" class="card hidden">
-<h2>Panel Admin</h2>
+
+<h2>🔐 Panel Admin</h2>
+
+<button onclick="showQuestions()">📝 Soal</button>
+<button onclick="showScores()">📊 Nilai Siswa</button>
+
+<hr>
+
+<div id="questionPanel">
+
+<h3>Tambah Soal</h3>
 
 <textarea id="q" placeholder="Tulis pertanyaan"></textarea>
 <input id="A" placeholder="Pilihan A">
@@ -70,24 +94,46 @@ input,textarea,select{width:100%;padding:11px;margin:7px 0 12px;box-sizing:borde
 <h3>Daftar Soal</h3>
 <div id="questionList"></div>
 
-<button onclick="clearQuestions()">🗑️ Hapus Semua Soal</button>
-<button onclick="home()">Keluar</button>
+<button class="danger" onclick="clearQuestions()">🗑️ Hapus Semua Soal</button>
+
 </div>
 
+<div id="scorePanel" class="hidden">
+
+<h3>📊 Nilai Siswa</h3>
+
+<div id="scoreList">
+Memuat nilai...
+</div>
+
+</div>
+
+<br>
+<button onclick="logoutAdmin()">Keluar Admin</button>
+
+</div>
+
+<!-- UJIAN -->
 <div id="exam" class="card hidden">
 
-<div style="display:flex;justify-content:space-between">
+<div style="display:flex;justify-content:space-between;align-items:center">
 <div>
 <b id="displayName"></b><br>
 <span id="displayClass"></span>
 </div>
+
 <div id="timer">30:00</div>
 </div>
 
 <hr>
 
 <h3>📷 Kamera Ujian</h3>
+
 <video id="camera" autoplay muted playsinline></video>
+
+<p class="small">
+Kamera aktif selama ulangan.
+</p>
 
 <div id="questionArea"></div>
 
@@ -95,74 +141,272 @@ input,textarea,select{width:100%;padding:11px;margin:7px 0 12px;box-sizing:borde
 
 </div>
 
+<!-- HASIL -->
 <div id="result" class="card hidden">
+
 <h2>🎉 Ulangan Selesai</h2>
+
 <div id="score" class="score"></div>
+
 <p id="resultInfo"></p>
-<button onclick="home()">Kembali</button>
+
+<button onclick="home()">Kembali ke Beranda</button>
+
 </div>
 
 </main>
 
-<script>
+<script type="module">
 
-let questions=JSON.parse(localStorage.getItem("evistaQuestions"))||[
-{
-q:"Berapakah hasil dari 2 + 3?",
-A:"4",B:"5",C:"6",D:"7",correct:"B"
-},
-{
-q:"Planet tempat manusia tinggal adalah?",
-A:"Mars",B:"Venus",C:"Bumi",D:"Jupiter",correct:"C"
+/* ==============================
+   FIREBASE
+============================== */
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+
+import {
+getAuth,
+signInWithEmailAndPassword,
+signOut,
+signInAnonymously
 }
-];
+from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+
+import {
+getFirestore,
+collection,
+addDoc,
+getDocs,
+deleteDoc,
+doc,
+query,
+orderBy
+}
+from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+
+const firebaseConfig = {
+
+apiKey:"AIzaSyC8FvLGE-LvIaPRyM3CI-sE0VA4iL5jxM4",
+
+authDomain:"evalista21.firebaseapp.com",
+
+projectId:"evalista21",
+
+storageBucket:"evalista21.firebasestorage.app",
+
+messagingSenderId:"87074800914",
+
+appId:"1:87074800914:web:be3ac1a371204c2e1a9fcb"
+
+};
+
+
+const app=initializeApp(firebaseConfig);
+
+const auth=getAuth(app);
+
+const db=getFirestore(app);
+
+
+/* ==============================
+   VARIABEL
+============================== */
+
+let questions=[];
 
 let current=0;
+
 let answers=[];
+
 let timer=null;
+
 let timeLeft=1800;
+
 let cameraStream=null;
 
+
+/* ==============================
+   TAMPILAN
+============================== */
+
 function show(id){
-document.querySelectorAll(".card").forEach(x=>x.classList.add("hidden"));
-document.getElementById(id).classList.remove("hidden");
+
+document
+.querySelectorAll(".card")
+.forEach(x=>x.classList.add("hidden"));
+
+document
+.getElementById(id)
+.classList.remove("hidden");
+
 }
+
+window.show=show;
+
 
 function home(){
+
 stopCamera();
+
 clearInterval(timer);
+
 show("home");
+
 }
 
-function loginAdmin(){
-if(document.getElementById("password").value==="admin123"){
+window.home=home;
+
+
+/* ==============================
+   SOAL FIRESTORE
+============================== */
+
+async function loadQuestions(){
+
+try{
+
+const snapshot=await getDocs(
+collection(db,"questions")
+);
+
+questions=[];
+
+snapshot.forEach(item=>{
+
+questions.push({
+id:item.id,
+...item.data()
+});
+
+});
+
+}catch(error){
+
+console.error(error);
+
+alert("Soal belum bisa dimuat.");
+
+}
+
+}
+
+
+/* ==============================
+   ADMIN LOGIN
+============================== */
+
+async function loginAdmin(){
+
+const email=
+document.getElementById("adminEmail").value.trim();
+
+const password=
+document.getElementById("adminPassword").value;
+
+if(!email||!password){
+
+alert("Isi email dan password.");
+
+return;
+
+}
+
+try{
+
+await signInWithEmailAndPassword(
+auth,
+email,
+password
+);
+
+await loadQuestions();
+
 show("admin");
+
 showQuestions();
-}else{
-alert("Password salah.");
-}
+
+}catch(error){
+
+console.error(error);
+
+alert("Email atau password admin salah.");
+
 }
 
-function addQuestion(){
+}
 
-let q=document.getElementById("q").value.trim();
-let A=document.getElementById("A").value.trim();
-let B=document.getElementById("B").value.trim();
-let C=document.getElementById("C").value.trim();
-let D=document.getElementById("D").value.trim();
-let correct=document.getElementById("correct").value;
+window.loginAdmin=loginAdmin;
+
+
+/* ==============================
+   LOGOUT
+============================== */
+
+async function logoutAdmin(){
+
+await signOut(auth);
+
+home();
+
+}
+
+window.logoutAdmin=logoutAdmin;
+
+
+/* ==============================
+   TAMBAH SOAL
+============================== */
+
+async function addQuestion(){
+
+const q=
+document.getElementById("q").value.trim();
+
+const A=
+document.getElementById("A").value.trim();
+
+const B=
+document.getElementById("B").value.trim();
+
+const C=
+document.getElementById("C").value.trim();
+
+const D=
+document.getElementById("D").value.trim();
+
+const correct=
+document.getElementById("correct").value;
+
 
 if(!q||!A||!B||!C||!D){
+
 alert("Lengkapi semua bagian soal.");
+
 return;
+
 }
 
-questions.push({q,A,B,C,D,correct});
 
-localStorage.setItem(
-"evistaQuestions",
-JSON.stringify(questions)
+try{
+
+await addDoc(
+collection(db,"questions"),
+{
+q:q,
+A:A,
+B:B,
+C:C,
+D:D,
+correct:correct
+}
 );
+
+await loadQuestions();
+
+showQuestions();
+
 
 document.getElementById("q").value="";
 document.getElementById("A").value="";
@@ -170,210 +414,593 @@ document.getElementById("B").value="";
 document.getElementById("C").value="";
 document.getElementById("D").value="";
 
-showQuestions();
+alert("Soal berhasil disimpan.");
 
-alert("Soal berhasil ditambahkan.");
+}catch(error){
+
+console.error(error);
+
+alert("Soal gagal disimpan.");
+
 }
+
+}
+
+window.addQuestion=addQuestion;
+
+
+/* ==============================
+   TAMPIL SOAL ADMIN
+============================== */
 
 function showQuestions(){
 
-let list=document.getElementById("questionList");
+document
+.getElementById("questionPanel")
+.classList.remove("hidden");
+
+document
+.getElementById("scorePanel")
+.classList.add("hidden");
+
+
+const list=
+document.getElementById("questionList");
+
 list.innerHTML="";
 
-questions.forEach((x,i)=>{
-list.innerHTML+=`
-<div style="border-bottom:1px solid #ddd;padding:10px">
-<b>${i+1}. ${x.q}</b><br>
-A. ${x.A}<br>
-B. ${x.B}<br>
-C. ${x.C}<br>
-D. ${x.D}<br>
-<small>Jawaban: ${x.correct}</small>
-</div>`;
-});
-}
-
-function clearQuestions(){
-
-if(confirm("Hapus semua soal?")){
-questions=[];
-localStorage.setItem("evistaQuestions",JSON.stringify(questions));
-showQuestions();
-}
-}
-
-async function startExam(){
-
-let name=document.getElementById("studentName").value.trim();
-let kelas=document.getElementById("studentClass").value.trim();
-
-if(!name||!kelas){
-alert("Nama dan kelas harus diisi.");
-return;
-}
 
 if(questions.length===0){
-alert("Belum ada soal.");
+
+list.innerHTML="<p>Belum ada soal.</p>";
+
 return;
+
 }
 
-if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-alert("Browser tidak mendukung kamera.");
-return;
+
+questions.forEach((x,i)=>{
+
+list.innerHTML+=`
+
+<div style="border-bottom:1px solid #ddd;padding:10px">
+
+<b>${i+1}. ${escapeHTML(x.q)}</b><br>
+
+A. ${escapeHTML(x.A)}<br>
+B. ${escapeHTML(x.B)}<br>
+C. ${escapeHTML(x.C)}<br>
+D. ${escapeHTML(x.D)}<br>
+
+<small>Jawaban benar: ${x.correct}</small>
+
+</div>
+
+`;
+
+});
+
 }
+
+window.showQuestions=showQuestions;
+
+
+/* ==============================
+   HAPUS SEMUA SOAL
+============================== */
+
+async function clearQuestions(){
+
+if(!confirm("Yakin ingin menghapus semua soal?")){
+
+return;
+
+}
+
 
 try{
 
-cameraStream=await navigator.mediaDevices.getUserMedia({
+const snapshot=
+await getDocs(collection(db,"questions"));
+
+for(const item of snapshot.docs){
+
+await deleteDoc(
+doc(db,"questions",item.id)
+);
+
+}
+
+questions=[];
+
+showQuestions();
+
+alert("Semua soal sudah dihapus.");
+
+}catch(error){
+
+console.error(error);
+
+alert("Soal gagal dihapus.");
+
+}
+
+}
+
+window.clearQuestions=clearQuestions;
+
+
+/* ==============================
+   NILAI SISWA
+============================== */
+
+async function showScores(){
+
+document
+.getElementById("questionPanel")
+.classList.add("hidden");
+
+document
+.getElementById("scorePanel")
+.classList.remove("hidden");
+
+
+const list=
+document.getElementById("scoreList");
+
+list.innerHTML="Memuat nilai...";
+
+
+try{
+
+const snapshot=
+await getDocs(collection(db,"scores"));
+
+if(snapshot.empty){
+
+list.innerHTML="<p>Belum ada nilai siswa.</p>";
+
+return;
+
+}
+
+
+let html="";
+
+snapshot.forEach(item=>{
+
+const x=item.data();
+
+html+=`
+
+<div style="border-bottom:1px solid #ddd;padding:12px">
+
+<b>${escapeHTML(x.name)}</b><br>
+
+Kelas: ${escapeHTML(x.className)}<br>
+
+Nilai: <b>${x.score}</b><br>
+
+Benar: ${x.correct} dari ${x.total} soal<br>
+
+<small>${escapeHTML(x.date)}</small>
+
+</div>
+
+`;
+
+});
+
+
+list.innerHTML=html;
+
+}catch(error){
+
+console.error(error);
+
+list.innerHTML="Nilai belum bisa dimuat.";
+
+}
+
+}
+
+window.showScores=showScores;
+
+
+/* ==============================
+   MULAI UJIAN
+============================== */
+
+async function startExam(){
+
+const name=
+document.getElementById("studentName")
+.value.trim();
+
+const kelas=
+document.getElementById("studentClass")
+.value.trim();
+
+
+if(!name||!kelas){
+
+alert("Nama dan kelas harus diisi.");
+
+return;
+
+}
+
+
+await loadQuestions();
+
+
+if(questions.length===0){
+
+alert("Belum ada soal.");
+
+return;
+
+}
+
+
+/* LOGIN SISWA SECARA ANONIM */
+
+try{
+
+await signInAnonymously(auth);
+
+}catch(error){
+
+console.error(error);
+
+alert("Sistem siswa belum siap.");
+
+return;
+
+}
+
+
+/* KAMERA */
+
+if(!navigator.mediaDevices||
+!navigator.mediaDevices.getUserMedia){
+
+alert("Browser tidak mendukung kamera.");
+
+return;
+
+}
+
+
+try{
+
+cameraStream=
+await navigator.mediaDevices.getUserMedia({
+
 video:{
 width:{ideal:1280},
 height:{ideal:720},
 facingMode:"user"
 },
+
 audio:false
+
 });
 
-let video=document.getElementById("camera");
+
+const video=
+document.getElementById("camera");
 
 video.srcObject=cameraStream;
 
-video.onloadedmetadata=function(){
-video.play();
-};
+await video.play();
+
 
 }catch(error){
 
-console.log(error);
+console.error(error);
 
 alert(
-"Kamera belum bisa digunakan. Pastikan kamera sudah diizinkan di Chrome."
+"Kamera belum bisa digunakan. Pastikan izin kamera sudah diberikan."
 );
 
 return;
+
 }
 
-document.getElementById("displayName").textContent=name;
-document.getElementById("displayClass").textContent="Kelas "+kelas;
+
+document
+.getElementById("displayName")
+.textContent=name;
+
+document
+.getElementById("displayClass")
+.textContent="Kelas "+kelas;
+
 
 current=0;
+
 answers=[];
+
 timeLeft=1800;
 
+
 show("exam");
+
 showQuestion();
+
 startTimer();
+
 }
+
+window.startExam=startExam;
+
+
+/* ==============================
+   TAMPIL SOAL UJIAN
+============================== */
 
 function showQuestion(){
 
-let x=questions[current];
+const x=questions[current];
 
-document.getElementById("questionArea").innerHTML=`
+document
+.getElementById("questionArea")
+.innerHTML=`
 
-<p><b>Soal ${current+1} dari ${questions.length}</b></p>
+<p>
+<b>Soal ${current+1} dari ${questions.length}</b>
+</p>
 
-<h3>${x.q}</h3>
+<h3>${escapeHTML(x.q)}</h3>
 
 <label class="option">
-<input type="radio" name="answer" value="A"> A. ${x.A}
+<input type="radio" name="answer" value="A">
+A. ${escapeHTML(x.A)}
 </label>
 
 <label class="option">
-<input type="radio" name="answer" value="B"> B. ${x.B}
+<input type="radio" name="answer" value="B">
+B. ${escapeHTML(x.B)}
 </label>
 
 <label class="option">
-<input type="radio" name="answer" value="C"> C. ${x.C}
+<input type="radio" name="answer" value="C">
+C. ${escapeHTML(x.C)}
 </label>
 
 <label class="option">
-<input type="radio" name="answer" value="D"> D. ${x.D}
+<input type="radio" name="answer" value="D">
+D. ${escapeHTML(x.D)}
 </label>
 
 `;
+
 }
+
+
+/* ==============================
+   JAWABAN BERIKUTNYA
+============================== */
 
 function nextQuestion(){
 
-let selected=document.querySelector(
+const selected=
+document.querySelector(
 'input[name="answer"]:checked'
 );
 
+
 if(!selected){
+
 alert("Pilih jawaban terlebih dahulu.");
+
 return;
+
 }
+
 
 answers[current]=selected.value;
 
+
 if(current<questions.length-1){
+
 current++;
+
 showQuestion();
+
 }else{
+
 finishExam();
+
 }
+
 }
+
+window.nextQuestion=nextQuestion;
+
+
+/* ==============================
+   TIMER
+============================== */
 
 function startTimer(){
 
 clearInterval(timer);
 
-timer=setInterval(function(){
+
+timer=setInterval(()=>{
 
 timeLeft--;
 
-let min=Math.floor(timeLeft/60);
-let sec=timeLeft%60;
 
-document.getElementById("timer").textContent=
-String(min).padStart(2,"0")+":"+
-String(sec).padStart(2,"0");
+const min=
+Math.floor(timeLeft/60);
+
+const sec=
+timeLeft%60;
+
+
+document
+.getElementById("timer")
+.textContent=
+String(min).padStart(2,"0")
++":"
++String(sec).padStart(2,"0");
+
 
 if(timeLeft<=0){
-finishExam();
-}
-
-},1000);
-}
-
-function finishExam(){
 
 clearInterval(timer);
 
+finishExam();
+
+}
+
+},1000);
+
+}
+
+
+/* ==============================
+   SELESAI
+============================== */
+
+async function finishExam(){
+
+clearInterval(timer);
+
+
 let benar=0;
 
-questions.forEach(function(x,i){
+
+questions.forEach((x,i)=>{
+
 if(answers[i]===x.correct){
+
 benar++;
+
 }
+
 });
 
-let nilai=Math.round(
+
+const nilai=
+Math.round(
 (benar/questions.length)*100
 );
 
+
+const name=
+document
+.getElementById("displayName")
+.textContent;
+
+
+const kelas=
+document
+.getElementById("displayClass")
+.textContent
+.replace("Kelas ","");
+
+
+/* SIMPAN NILAI */
+
+try{
+
+await addDoc(
+collection(db,"scores"),
+{
+
+name:name,
+
+className:kelas,
+
+score:nilai,
+
+correct:benar,
+
+total:questions.length,
+
+date:new Date().toLocaleString("id-ID")
+
+}
+);
+
+}catch(error){
+
+console.error(error);
+
+alert(
+"Nilai selesai dihitung, tetapi belum berhasil disimpan."
+);
+
+}
+
+
 stopCamera();
+
 
 show("result");
 
-document.getElementById("score").textContent=nilai;
 
-document.getElementById("resultInfo").textContent=
-"Jawaban benar "+benar+
-" dari "+questions.length+" soal.";
+document
+.getElementById("score")
+.textContent=nilai;
+
+
+document
+.getElementById("resultInfo")
+.textContent=
+"Jawaban benar "+
+benar+
+" dari "+
+questions.length+
+" soal.";
+
 }
+
+
+/* ==============================
+   STOP KAMERA
+============================== */
 
 function stopCamera(){
 
 if(cameraStream){
 
-cameraStream.getTracks().forEach(
-track=>track.stop()
-);
+cameraStream
+.getTracks()
+.forEach(track=>track.stop());
 
 cameraStream=null;
+
 }
+
 }
+
+
+/* ==============================
+   PENGAMAN TAMPILAN
+============================== */
+
+function escapeHTML(text){
+
+return String(text)
+.replaceAll("&","&amp;")
+.replaceAll("<","&lt;")
+.replaceAll(">","&gt;")
+.replaceAll('"',"&quot;")
+.replaceAll("'","&#039;");
+
+}
+
+
+/* ==============================
+   MULAI
+============================== */
+
+show("home");
 
 </script>
 
